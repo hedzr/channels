@@ -3,7 +3,7 @@
 package channels_test
 
 import (
-	"github.com/hedzr/pools/channels"
+	"github.com/hedzr/channels"
 	"testing"
 )
 
@@ -20,7 +20,8 @@ func TestMerge(t *testing.T) {
 	}
 
 	x := 1
-	t.Log(channels.ZM(x))
+	t.Log(channels.TI(x))
+	t.Log(channels.TD(x))
 }
 
 func TestFanOut(t *testing.T) {
