@@ -231,6 +231,40 @@ func TakeWhile(done <-chan struct{}, valueStream <-chan Data, fn func(Data) bool
 	return takeStream
 }
 
+// Tee fan-out one input to each receivers
+func Tee(in <-chan In, out ...chan Out) {
+	go func() {
+		defer func() {
+			for i := 0; i < len(out); i++ {
+				close(out[i])
+			}
+		}()
+		for v := range in {
+			for i := 0; i < len(out); i++ {
+				out[i] <- v
+			}
+		}
+	}()
+}
+
+// TeeAsync fan-out one input to each receivers asynchronously
+func TeeAsync(in <-chan In, out ...chan Out) {
+	go func() {
+		defer func() {
+			for i := 0; i < len(out); i++ {
+				close(out[i])
+			}
+		}()
+		for v := range in {
+			for i := 0; i < len(out); i++ {
+				go func() {
+					out[i] <- v
+				}()
+			}
+		}
+	}()
+}
+
 // Merge is a fan-out operator with random algorithm (based golang runtime)
 func Merge(cs ...<-chan Out) <-chan Out {
 	var wg sync.WaitGroup
@@ -291,7 +325,6 @@ func FanOutReflect(ch <-chan In, out ...chan Out) {
 		}
 
 		for v := range ch {
-			v := v
 			for i := range cases {
 				cases[i].Send = reflect.ValueOf(v)
 			}
