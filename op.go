@@ -60,8 +60,78 @@ func Reduce(in <-chan In, fn func(r Out, v In) Out) (out Out) {
 	return out
 }
 
-// OrDone selects input from channel or checking done signal triggering
-func OrDone(done <-chan struct{}, c <-chan Data) <-chan Data {
+// Or or-channel pattern
+func Or(channels ...<-chan interface{}) <-chan interface{} {
+	switch len(channels) {
+	case 0:
+		return nil
+	case 1:
+		return channels[0]
+	}
+
+	orDone := make(chan interface{})
+	go func() {
+		defer close(orDone)
+
+		switch len(channels) {
+		case 2:
+			select {
+			case <-channels[0]:
+			case <-channels[1]:
+			}
+		default:
+			select {
+			case <-channels[0]:
+			case <-channels[1]:
+			case <-channels[2]:
+			case <-Or(append(channels[3:], orDone)...):
+			}
+		}
+	}()
+	return orDone
+}
+
+// OrDone or-done-channel pattern
+func OrDone(done chan struct{}, channels ...<-chan interface{}) <-chan interface{} {
+	switch len(channels) {
+	case 0:
+		return nil
+	}
+
+	orDone := make(chan interface{})
+	go func() {
+		defer close(orDone)
+
+		switch len(channels) {
+		case 1:
+			select {
+			case <-done:
+				return
+			case <-channels[0]:
+			}
+		case 2:
+			select {
+			case <-done:
+				return
+			case <-channels[0]:
+			case <-channels[1]:
+			}
+		default:
+			select {
+			case <-done:
+				return
+			case <-channels[0]:
+			case <-channels[1]:
+			case <-channels[2]:
+			case <-Or(append(channels[3:], orDone)...):
+			}
+		}
+	}()
+	return orDone
+}
+
+// OrDone1 selects input from channel or checking done signal triggering
+func OrDone1(done <-chan struct{}, c <-chan Data) <-chan Data {
 	valStream := make(chan Data)
 	go func() {
 		defer close(valStream)
@@ -99,7 +169,7 @@ func Flat(done <-chan struct{}, chanStream <-chan <-chan Data) <-chan Data {
 			case <-done:
 				return
 			}
-			for val := range OrDone(done, stream) {
+			for val := range OrDone1(done, stream) {
 				select {
 				case valStream <- val:
 				case <-done:
