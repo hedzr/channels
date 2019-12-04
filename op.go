@@ -265,6 +265,32 @@ func TeeAsync(in <-chan In, out ...chan Out) {
 	}()
 }
 
+// TeeReflect likes Tee but via golang reflect
+func TeeReflect(in <-chan In, out ...chan Out) {
+	go func() {
+		defer func() {
+			for i := 0; i < len(out); i++ {
+				close(out[i])
+			}
+		}()
+		cases := make([]reflect.SelectCase, len(out))
+		for i := range cases {
+			cases[i].Dir = reflect.SelectSend
+		}
+		for v := range in {
+			v := v
+			for i := range cases {
+				cases[i].Chan = reflect.ValueOf(out[i])
+				cases[i].Send = reflect.ValueOf(v)
+			}
+			for _ = range cases { // for each channel
+				chosen, _, _ := reflect.Select(cases)
+				cases[chosen].Chan = reflect.ValueOf(nil)
+			}
+		}
+	}()
+}
+
 // Merge is a fan-out operator with random algorithm (based golang runtime)
 func Merge(cs ...<-chan Out) <-chan Out {
 	var wg sync.WaitGroup
