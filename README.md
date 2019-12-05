@@ -1,4 +1,4 @@
 # channels
 
-A collections of the patterns of golang channels.
+A collection of the patterns of golang channels.
 
