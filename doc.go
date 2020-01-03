@@ -8,7 +8,7 @@ const (
 	// AppName const
 	AppName = "channels"
 	// Version const
-	Version = "0.0.2"
+	Version = "0.0.3"
 	// VersionInt const
-	VersionInt = 0x000002
+	VersionInt = 0x000003
 )
